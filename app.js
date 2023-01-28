@@ -3,6 +3,8 @@ import dotenv from 'dotenv'
 import colors from 'colors'
 import morgan from 'morgan'
 import connect from './configs/connectDb.js'
+import UserRouter from './routes/userRoutes.js'
+import errorHandler from './middlewares/errorMiddleware.js'
 
 dotenv.config()
 
@@ -17,11 +19,18 @@ await connect(DB_URI)
 
 const app = express()
 app.use(express.json())
-app.use(morgan('dev'))
 
-app.use('/', (req, res, next) => {
-  res.send('welcome to the api!')
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'))
+}
+
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Welcome to API' })
 })
+
+app.use('/api/v1/users', UserRouter)
+
+app.use(errorHandler)
 
 app.listen(PORT, function () {
   console.log(colors.bold.magenta.underline('Server listening on port', PORT))
