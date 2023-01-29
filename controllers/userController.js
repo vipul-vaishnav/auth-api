@@ -72,7 +72,7 @@ const loginUser = asyncHandler(async (req, res) => {
         if (isPasswordCorrect) {
           const token = generateToken(doesUserExist._id)
 
-          res.cookie(String(doesUserExist._id), token, {
+          res.cookie('accessToken', token, {
             path: '/',
             expires: new Date(Date.now() + 1000 * 30),
             httpOnly: true,

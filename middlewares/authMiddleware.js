@@ -13,7 +13,7 @@ const verifyToken = asyncHandler(async (req, res, next) => {
   if (req.headers.cookie) {
     try {
       //get token from authorization
-      token = req.headers.cookie.split('=')[1]
+      token = req.headers.cookie.split('accessToken')[1].slice(1)
 
       // get id from token
       const { userId } = jwt.verify(token, JWT_SECRET_KEY)

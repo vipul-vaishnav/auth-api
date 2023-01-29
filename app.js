@@ -20,7 +20,12 @@ const DB_URI = process.env.MONGO_DB_URI.replace('%USER%', process.env.MONGO_DB_U
 await connect(DB_URI)
 
 const app = express()
-app.use(cors())
+app.use(
+  cors({
+    credentials: true,
+    origin: 'http://localhost:3000'
+  })
+)
 app.use(cookieParser())
 app.use(express.json())
 
