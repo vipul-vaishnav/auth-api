@@ -70,13 +70,22 @@ const loginUser = asyncHandler(async (req, res) => {
         const isPasswordCorrect = await bcrypt.compare(password, doesUserExist.password)
 
         if (isPasswordCorrect) {
+          const token = generateToken(doesUserExist._id)
+
+          res.cookie(String(doesUserExist._id), token, {
+            path: '/',
+            expires: new Date(Date.now() + 1000 * 30),
+            httpOnly: true,
+            sameSite: 'lax'
+          })
+
           res.status(200).json({
             status: 'success',
             message: 'User verified successfully!',
             data: {
               user: { id: doesUserExist._id, name: doesUserExist.name, email: doesUserExist.email }
             },
-            token: generateToken(doesUserExist._id)
+            token
           })
         } else {
           res.status(400)

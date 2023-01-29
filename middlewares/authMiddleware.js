@@ -10,10 +10,10 @@ const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY
 const verifyToken = asyncHandler(async (req, res, next) => {
   let token
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (req.headers.cookie) {
     try {
       //get token from authorization
-      token = req.headers.authorization.split(' ')[1]
+      token = req.headers.cookie.split('=')[1]
 
       // get id from token
       const { userId } = jwt.verify(token, JWT_SECRET_KEY)

@@ -5,6 +5,7 @@ import morgan from 'morgan'
 import connect from './configs/connectDb.js'
 import UserRouter from './routes/userRoutes.js'
 import errorHandler from './middlewares/errorMiddleware.js'
+import cookieParser from 'cookie-parser'
 
 dotenv.config()
 
@@ -18,6 +19,7 @@ const DB_URI = process.env.MONGO_DB_URI.replace('%USER%', process.env.MONGO_DB_U
 await connect(DB_URI)
 
 const app = express()
+app.use(cookieParser())
 app.use(express.json())
 
 if (process.env.NODE_ENV !== 'production') {
