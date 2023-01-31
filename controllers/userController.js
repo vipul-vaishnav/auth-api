@@ -1,7 +1,13 @@
 import UserModel from './../models/User.js'
 import bcrypt from 'bcrypt'
-import generateToken from '../token/generateToken.js'
+import generateAccessToken from '../token/generateAccessToken.js'
+import generateRefreshToken from '../token/generateRefreshToken.js'
 import asyncHandler from 'express-async-handler'
+import dotenv from 'dotenv'
+import jwt from 'jsonwebtoken'
+
+dotenv.config()
+const JWT_REFRESH_KEY = process.env.JWT_REFRESH_KEY
 
 // @desc    To register a new user
 // @route   /api/v1/users/new
@@ -70,13 +76,25 @@ const loginUser = asyncHandler(async (req, res) => {
         const isPasswordCorrect = await bcrypt.compare(password, doesUserExist.password)
 
         if (isPasswordCorrect) {
-          const token = generateToken(doesUserExist._id)
+          const accessToken = generateAccessToken(doesUserExist._id)
+          const refreshToken = generateRefreshToken(doesUserExist._id)
 
-          res.cookie('accessToken', token, {
+          if (req.cookies['accessToken']) {
+            req.cookies['accessToken'] = ''
+          }
+
+          res.cookie('accessToken', accessToken, {
             path: '/',
             expires: new Date(Date.now() + 1000 * 30),
             httpOnly: true,
             sameSite: 'lax'
+          })
+
+          res.cookie('refreshToken', refreshToken, {
+            path: '/',
+            httpOnly: true,
+            sameSite: 'lax',
+            expires: new Date(Date.now() + 1000 * 35)
           })
 
           res.status(200).json({
@@ -85,7 +103,7 @@ const loginUser = asyncHandler(async (req, res) => {
             data: {
               user: { id: doesUserExist._id, name: doesUserExist.name, email: doesUserExist.email }
             },
-            token
+            accessToken
           })
         } else {
           res.status(400)
@@ -98,6 +116,44 @@ const loginUser = asyncHandler(async (req, res) => {
     } else {
       res.status(404)
       throw new Error('Missing required field/s')
+    }
+  } catch (error) {
+    res.status(401)
+    throw new Error(error.message)
+  }
+})
+
+// @desc    refresh token
+// @route   /api/v1/users/refresh
+// @access  PUBLIC
+const refresh = asyncHandler(async (req, res, next) => {
+  try {
+    const cookies = req.cookies
+
+    if (!cookies?.refreshToken) {
+      res.status(401)
+      throw new Error('Not authorized')
+    } else {
+      const { userId } = jwt.verify(cookies.refreshToken, JWT_REFRESH_KEY)
+
+      const user = await UserModel.findById(userId)
+
+      if (!user) {
+        res.status(401)
+        throw new Error('Not authorized')
+      } else {
+        const accessToken = generateAccessToken(user._id)
+
+        res.cookie('accessToken', accessToken, {
+          path: '/',
+          expires: new Date(Date.now() + 1000 * 30),
+          httpOnly: true,
+          sameSite: 'lax'
+        })
+
+        req.id = user._id
+        next()
+      }
     }
   } catch (error) {
     res.status(401)
@@ -158,4 +214,19 @@ const updateUserPassword = asyncHandler(async (req, res) => {
   }
 })
 
-export { createUser, loginUser, getUser, updateUserPassword }
+// @desc    To reset password of an existing user
+// @route   /api/v1/users/change-password
+// @access  PRIVATE
+const logoutUser = asyncHandler(async (req, res) => {
+  const cookies = req.cookies
+
+  if (!cookies?.accessToken || !cookies?.refreshToken) {
+    res.sendStatus(204)
+  } else {
+    res.clearCookie('accessToken', { httpOnly: true, sameSite: 'lax' })
+    res.clearCookie('refreshToken', { httpOnly: true, sameSite: 'lax' })
+    res.send(200).json({ status: 'success', message: 'User logged out successfully!' })
+  }
+})
+
+export { createUser, loginUser, refresh, getUser, updateUserPassword, logoutUser }
